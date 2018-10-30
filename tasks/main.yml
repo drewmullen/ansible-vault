@@ -9,32 +9,60 @@
     name: "{{ vault_user }}"
     comment: "Vault user"
     group: "{{ vault_group }}"
-    system: yes
+    system: true
   when: vault_manage_user | bool
 
 - name: Include OS-specific variables
   include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Check Vault installation
+  command: which vault
+  register: vault_installation
+  changed_when: False
+  ignore_errors: True
+  check_mode: False
+
+- name: Get installed Vault version
+  shell: "{{ vault_installation.stdout }} -version | cut -d' ' -f2 | tr -d 'v'"
+  when: not vault_installation is failed
+  changed_when: False
+  check_mode: False
+  register: installed_vault_version
+
+- name: Compute if installation is required
+  set_fact:
+    installation_required: "{{ vault_installation is failed or installed_vault_version.stdout != vault_version }}"
 
 - name: Install OS packages and Vault Enterprise via control host
   include: install_enterprise.yml
   when:
     - vault_enterprise | bool
     - not vault_install_remotely | bool
+    - installation_required | bool
 
 - name: Install OS packages and Vault via control host
   include: install.yml
   when:
     - not vault_enterprise | bool
     - not vault_install_remotely | bool
+    - installation_required | bool
 
 - name: Install OS packages and Vault via remote hosts
   include: install_remote.yml
   when:
     - not vault_enterprise | bool
     - vault_install_remotely | bool
+    - installation_required | bool
+
+- name: Check Vault mlock capability
+  command: "setcap -v cap_ipc_lock=+ep {{ vault_bin_path }}/vault"
+  changed_when: False  # read-only task
+  ignore_errors: True
+  register: vault_mlock_capability
 
 - name: Enable non root mlock capability
   command: "setcap cap_ipc_lock=+ep {{ vault_bin_path }}/vault"
+  when: vault_mlock_capability is failed
 
 - name: Create directories
   file:
@@ -49,11 +77,11 @@
     - "{{ vault_run_path }}"
 
 - name: Enable logrotate for vault
-  template: 
-    src: vault_logrotate.j2
+  template:
+    src: "{{ vault_logrotate_template }}"
     dest: /etc/logrotate.d/vault
-    owner:  root
-    group:  root
+    owner: root
+    group: root
     mode: 0644
   when: vault_enable_logrotate
 
@@ -63,17 +91,17 @@
 
 - name: Listener configuration
   template:
-    src: vault_listener.hcl.j2
+    src: "{{ vault_listener_template }}"
     dest: "{{ vault_main_config }}"
-    owner:  "{{ vault_user }}"
-    group:  "{{ vault_group }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_group }}"
     mode: "0400"
   notify: Restart vault
 
 
 - name: BSD init script
   template:
-    src: vault_bsdinit.j2
+    src: "{{ vault_bsdinit_template }}"
     dest: /etc/rc.d/vault
     owner: root
     group: wheel
@@ -82,7 +110,7 @@
 
 - name: SYSV init script
   template:
-    src: vault_sysvinit.j2
+    src: "{{ vault_sysvinit_template }}"
     dest: /etc/init.d/vault
     owner: root
     group: root
@@ -95,7 +123,7 @@
 
 - name: Debian init script
   template:
-    src: vault_debian.init.j2
+    src: "{{ vault_debian_init_template }}"
     dest: /etc/init.d/vault
     owner: root
     group: root
@@ -108,7 +136,7 @@
 
 - name: systemd unit
   template:
-    src: vault_systemd.service.j2
+    src: "{{ vault_systemd_template }}"
     dest: /lib/systemd/system/vault.service
     owner: root
     group: root
@@ -122,17 +150,20 @@
   service:
     name: vault
     state: started
-    enabled: yes
+    enabled: true
 
 - name: Restart Vault if needed
   meta: flush_handlers
 
-- name: Vault API reachable? If not please unseal it
+# This should succeed regardless of seal state
+- name: Vault API reachable?
   uri:
     validate_certs: "{{ validate_certs_during_api_reachable_check | bool }}"
     url: "{{ vault_tls_disable | ternary('http', 'https') }}://{{ (vault_address == '0.0.0.0') | ternary('127.0.0.1', vault_address) }}:{{ vault_port }}/v1/sys/health"
     method: GET
-    # 200 if initialized, unsealed, and active. 429 is also OK for HA cluster (means standby + unsealed in HA)
+    # 200 if initialized, unsealed, and active.
+    # 429 is also OK for HA cluster (means standby + unsealed in HA)
+    # See: https://www.vaultproject.io/api/system/health.html
     status_code: "{{ vault_cluster_disable | ternary('200', '200, 429') }}"
     body_format: json
   register: check_result

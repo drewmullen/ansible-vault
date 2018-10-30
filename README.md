@@ -18,11 +18,11 @@ This role requires FreeBSD, or a Debian or RHEL based Linux distribution. It
 might work with other software versions, but does work with the following
 specific software and versions:
 
-* Ansible: 2.5.0
-* Vault: 0.10.1
+* Ansible: 2.7.0
+* Vault: 0.11.3
 * Debian: 9
 * FreeBSD 11
-* Ubuntu 16.04
+* Ubuntu 18.04
 
 Sorry, there is no planned support at the moment for Windows.
 
@@ -38,7 +38,7 @@ The role defines variables in `defaults/main.yml`:
   - Will include "+prem" if vault_enterprise_premium=True
   - Will include ".hsm" if vault_enterprise_premium_hsm=True
 
-- Default value: *0.10.1*
+- Default value: *0.11.3*
 
 ### `vault_enterprise`
 
@@ -189,11 +189,6 @@ The role defines variables in `defaults/main.yml`:
 - Primary network interface address to use
 - Default value: `"{{ hostvars[inventory_hostname]['ansible_'+vault_iface]['ipv4']['address'] }}"`
 
-### `vault_redirect_addr`
-
-- [HA Client Redirect address](https://www.vaultproject.io/docs/concepts/ha.html#client-redirection)
-- Default value: `"{{ hostvars[inventory_hostname]['ansible_'+vault_iface]['ipv4']['address'] }}"`
-
 ### `vault_port`
 
 - TCP port number to on which to listen
@@ -219,6 +214,10 @@ The role defines variables in `defaults/main.yml`:
 - Main configuration file name (full path)
 - Default value: `"{{ vault_config_path }}/vault_main.hcl"`
 
+### `vault_listener_template`
+- Vault listener configuration template file
+- Default value: *vault_listener.hcl.j2*
+
 ### `vault_backend_consul`
 
 - Backend consul template filename
@@ -226,8 +225,19 @@ The role defines variables in `defaults/main.yml`:
 
 ### `vault_cluster_address`
 
-- Address for intra-cluster communication
-- Default value: `"{{ hostvars[inventory_hostname]['ansible_'+vault_iface]['ipv4']['address'] }}"`
+- Address to bind to for cluster server-to-server requests
+- Default value: `"{{ hostvars[inventory_hostname]['ansible_'+vault_iface]['ipv4']['address'] }}:{{ (vault_port | int) + 1}}"`
+
+### `vault_cluster_addr`
+
+- Address to advertise to other Vault servers in the cluster for request forwarding
+- Default value: `"{{ vault_protocol }}://{{ vault_cluster_address }}"`
+
+### `vault_api_addr`
+
+- [HA Client Redirect address](https://www.vaultproject.io/docs/concepts/ha.html#client-redirection)
+- Default value: `"{{ vault_protocol }}://{{ vault_redirect_address or hostvars[inventory_hostname]['ansible_'+vault_iface]['ipv4']['address'] }}:{{ vault_port }}"`
+  - vault_redirect_address is kept for backward compatibility but is deprecated.
 
 ### `vault_cluster_disable`
 
@@ -272,16 +282,16 @@ The role defines variables in `defaults/main.yml`:
   - Override with `VAULT_TLS_CA_CRT` environment variable
 - Default value: `ca.crt`
 
-### `vault_tls_server_crt_file`
+### `vault_tls_cert_file`
 
 - Server certificate
-  - Override with `VAULT_TLS_SERVER_CRT` environment variable
+  - Override with `VAULT_TLS_CERT_FILE` environment variable
 - Default value: `server.crt`
 
 ### `vault_tls_key_file`
 
 - Server key
-  - Override with `VAULT_TLS_SERVER_KEY` environment variable
+  - Override with `VAULT_TLS_KEY_FILE` environment variable
 - Default value: `server.key`
 
 ### `vault_tls_min_version`
@@ -301,10 +311,37 @@ The role defines variables in `defaults/main.yml`:
   - Can be overridden with `VAULT_TLS_PREFER_SERVER_CIPHER_SUITES` environment variable
 - Default value: *false*
 
+### `vault_tls_require_and_verify_client_cert`
+
+- [Require clients to present a valid client certificate](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_require_and_verify_client_cert)
+- Default value: *false*
+
+### `vault_tls_disable_client_certs`
+
+- [Disable requesting for client certificates](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_disable_client_certs)
+- Default value: *false*
+
+
 ### `vault_tls_files_remote_src`
 
 - Copy from remote source if TLS files are already on host
 - Default value: *no*
+
+### `vault_bsdinit_template`
+- BSD init template file 
+- Default value: *vault_bsdinit.j2*
+
+### `vault_sysvinit_template`
+- SysV init  template file
+- Default value: *vault_sysvinit.j2*
+
+### `vault_debian_init_template`
+- Debian init template file
+- Default value: *vault_debian.init.j2*
+
+### `vault_systemd_template`
+- Systemd service template file
+- Default value: *vault_systemd.service.j2*
 
 ## OS Distribution Variables
 
@@ -394,6 +431,11 @@ differences across distributions:
 
 - Determines how frequently to rotate vault logs
 - Default value: *7*
+
+### `vault_logrotate_template`
+
+- Logrotate template file
+- Default value: *vault_logrotate.j2*
 
 ### `vault_ubuntu_os_packages`
 

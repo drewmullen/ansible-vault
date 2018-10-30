@@ -1,9 +1,35 @@
-## v2.0.3 (UNRELEASED)
+## v2.0.7
 
-- Vault version 0.10.2
+- Vault v0.11.3
+- Templates in main tasks as variables (thanks @nathkn)
+- systemd unit updates (thanks @bdossantos)
+- Update documentation
+
+## v2.0.5
+
+- Vault v0.11.2
+- Update systemd unit
+- Update Consul storage backend template (thanks @jpiron)
+- Configuration updates (thanks @jpiron)
+- Add client cert validation options to listener configuration (thanks @nathkn)
+
+## v2.0.4
+
+- Vault v0.11.1
+- Update tasks/normalize conditionals
+- Update TLS variable names to match documentation
+- Conditional mlock capability (thanks @jpiron)
+- Streamline installation tasks (thanks @jpiron)
+- Update documentation
+
+## v2.0.3
+
+- Vault version 0.10.4
 - Debian 9 support
 - Update support for enterprise versions (thanks @drewmullen)
 - Log rotation updates (thanks @drewmullen)
+- Update systemd unit file
+- Update documentation
 
 ## v2.0.2
 
