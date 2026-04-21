@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0](https://github.com/ansible-community/ansible-vault/compare/v3.4.0...v3.5.0) (2026-04-14)
+
+### Features
+
+* provide ability to configure missing mysql storage options ([#409](https://github.com/ansible-community/ansible-vault/issues/409)) ([067d355](https://github.com/ansible-community/ansible-vault/commit/067d3557de1ba11c50aca70e8c3e6c5b2f235410))
+
+## [3.4.0](https://github.com/ansible-community/ansible-vault/compare/v3.3.2...v3.4.0) (2026-04-14)
+
+### Features
+
+* optionally do not use subshell for systemd execstart ([#415](https://github.com/ansible-community/ansible-vault/issues/415)) ([7102730](https://github.com/ansible-community/ansible-vault/commit/7102730499b11dcdce105e0273233dfcdd4e96a0))
+
 ## [3.3.2](https://github.com/ansible-community/ansible-vault/compare/v3.3.1...v3.3.2) (2026-02-09)
 
 ### Bug Fixes
